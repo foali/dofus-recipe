@@ -1,15 +1,6 @@
-import urllib
-import json
-import numpy as np
-import pandas as pd
 import bs4
 import math
-import sys
-import time
-import argparse
 import requests
-from PIL import Image
-from requests.adapters import HTTPAdapter
 import tkinter as tk
 from tkinter import ttk
 
@@ -25,7 +16,7 @@ from tkinter import ttk
 
 
 def RetrieveData(search_item):
-    if search_item != None:
+    if search_item is not None:
         print(search_item)
 
 
@@ -72,10 +63,17 @@ class StartPage(tk.Frame):
         self.listbonus = tk.Listbox(self, selectmode='multiple', exportselection=0)
         for i, j in sorted(bonus_primaire.items()):
             self.listbonus.insert(j, i)
+        self.listbonussec = tk.Listbox(self, selectmode='multiple', exportselection=0)
+        for i, j in sorted(bonus_secondaire.items()):
+            self.listbonussec.insert(j, i)
         self.And_or_prim = tk.StringVar()
+        self.And_or_seco = tk.StringVar()
         Button1 = tk.Radiobutton(self, text="And", variable=self.And_or_prim, value="AND")
         Button2 = tk.Radiobutton(self, text="Or", variable=self.And_or_prim, value="OR")
         Button1.select()
+        Button3 = tk.Radiobutton(self, text="And", variable=self.And_or_seco, value="AND")
+        Button4 = tk.Radiobutton(self, text="Or", variable=self.And_or_seco, value="OR")
+        Button3.select()
         self.levelmin = tk.IntVar()
         self.levelmin.set(1)
         text_levelmin = tk.Entry(self, textvariable=self.levelmin, width=4)
@@ -91,13 +89,16 @@ class StartPage(tk.Frame):
         self.listitem.grid(row=1, column=0, columnspan=2)
         tk.Label(self, text="Bonus").grid(row=2, column=0, columnspan=3)
         self.listbonus.grid(row=3, column=0, columnspan=2, rowspan=2)
-        Button1.grid(row=3, column=2)
-        Button2.grid(row=4, column=2)
-        text_levelmin.grid(row=5, column=1)
-        text_levelmax.grid(row=6, column=1)
-        tk.Label(self, text="Level min").grid(row=5, column=0)
-        tk.Label(self, text="Level max").grid(row=6, column=0)
-        Launchsearch.grid(row=5, column=2, rowspan=2)
+        Button1.grid(row=5, column=0)
+        Button2.grid(row=5, column=1)
+        self.listbonussec.grid(row=3, column=2, columnspan=2, rowspan=2)
+        Button3.grid(row=5, column=2)
+        Button4.grid(row=5, column=3)
+        text_levelmin.grid(row=6, column=1)
+        text_levelmax.grid(row=7, column=1)
+        tk.Label(self, text="Level min").grid(row=6, column=0)
+        tk.Label(self, text="Level max").grid(row=7, column=0)
+        Launchsearch.grid(row=6, column=2, rowspan=2)
 
     def test(self):
         print(self.levelmax.get())
@@ -117,19 +118,85 @@ class PageOne(tk.Frame):
         value_list_item = start_page.listitem.curselection()
         value_list_arme = start_page.listarme.curselection()
         value_list_bonus = start_page.listbonus.curselection()
-        if value_list_item != None:
+        value_list_bonus_sec = start_page.listbonussec.curselection()
+        list_link_item = []
+        if value_list_item is not None:
             s = "http://www.dofus.com/fr/mmorpg/encyclopedie/equipements?text="
             for i in value_list_item:
                 s = s + "&type_id[]=" + str(list_object[start_page.listitem.get(i)])
-            if value_list_bonus != None:
+            if value_list_bonus is not None:
                 for i in value_list_bonus:
                     s = s + "&EFFECTMAIN[]=" + str(
                         bonus_primaire[start_page.listbonus.get(i)])
+                s = s + "&EFFECTMAIN_and_or=" + str(start_page.And_or_prim.get())
+            if value_list_bonus_sec is not None:
+                for i in value_list_bonus_sec:
+                    s = s + "&EFFECT[]=" + str(
+                        bonus_primaire[start_page.listbonus.get(i)])
                 s = s + "&EFFECT_and_or=" + str(start_page.And_or_prim.get())
+            s = s + "&size=96"
             print(s)
+            site = requests.get(s)
+            # f = open('test.txt', 'w')
+            soup = bs4.BeautifulSoup(site.text, 'html.parser')
+            number_result = 1
+            if(soup.find("div", class_="ak-list-info") is not None):
+                number_result = soup.find("div", class_="ak-list-info").strong.string
+            number_page = math.ceil(int(number_result) / 96)
+            for link in soup.tbody.find_all('a'):
+                list_link_item.append(link.get('href'))
+            for i in range(2, number_page + 1):
+                w = s + "&page=" + str(i)
+                print(w)
+                site = requests.get(w)
+                soup = bs4.BeautifulSoup(site.text, 'html.parser')
+                for link in soup.tbody.find_all('a'):
+                    list_link_item.append(link.get('href'))
+            list_link_item = list(set(list_link_item))
+            self.list_name_item = {}
+            self.resultlist = tk.Listbox(self, selectmode='multiple', exportselection=0)
+            for link in list_link_item:
+                site = requests.get("http://www.dofus.com" + link)
+                soup = bs4.BeautifulSoup(site.text, 'html.parser')
+                craft_panel = soup.find("div", class_="ak-container ak-panel ak-crafts")
+                if craft_panel is not None:
+                    dic_name_nb = {}
+                    for ressources in craft_panel.find_all("div", class_="ak-list-element"):
+                        nbressource = ressources.find("div", class_="ak-front").text
+                        nameressource = ressources.find(
+                            "div", class_="ak-content").find("span", class_="ak-linker").text
+                        dic_name_nb[nameressource] = int(nbressource[:-4])
+                    self.list_name_item[soup.find(
+                        "h1", class_="ak-return-link").text.replace(' ', '').replace('\n', '')] = dic_name_nb
+                else:
+                    list_link_item.remove(link)
+            for i, j in enumerate(self.list_name_item):
+                self.resultlist.insert(i, j)
+            self.resultlist.selection_set(0, self.resultlist.size() - 1)
+            self.resultlist.grid(row=1, column=0)
+            button = ttk.Button(self, text="Print to file", command=self.printresultfile)
+            button.grid(row=2, column=1, columnspan=1)
+            # f.write(site.text)
+            # f.close()
         # RetrieveData(StartPage.listarme.curselection())
         # test = tk.Listbox(self, selectmode='multiple', exportselection=0)
         # test.grid(row=1, column=0, columnspan=1)
+
+    def printresultfile(self):
+        itemvoulu = self.resultlist.curselection()
+        list_ressource = {}
+        for i in itemvoulu:
+            print(i)
+            print(self.list_name_item)
+            for item, value in self.list_name_item[self.resultlist.get(i)].items():
+                if item in list_ressource:
+                    list_ressource[item] = list_ressource[item] + value
+                else:
+                    list_ressource[item] = value
+        f = open("listressource.txt", "w")
+        for item in list_ressource:
+            print(item + ": " + str(list_ressource[item]), file=f)
+        f.close()
 
 
 list_object = {"ammulette": 1, "anneau": 9, "bottes":  11, "bouclier": 82,
@@ -142,24 +209,14 @@ list_armes = {"arc": 2, "baguette": 3,
 
 bonus_primaire = {"Agilité": 8, "Chance": 9, "Critique": 10, "Force": 4,
                   "Intelligence": 7, "Invocations": 23, "Pa": 2, "Pm": 3, "Po": 11}
-
-
-class test(object):
-    def __init__(self, root, **kwargs):
-        self.frame = root
-        self.frame.minsize(860, 265)
-        k = 0
-        for i, j in list_object.items():
-            button = Checkbutton(root, text=i, variable=j)
-            button.pack()
-
+bonus_secondaire = {"Sagesse": 6, "Soins": 113, "Tacle": 344, "Vitalité": 5}
+And_Or_seco = "AND"
 
 if __name__ == "__main__":
     app = dofus_frame()
     app.mainloop()
 
-# bonus_secondaire = {"% Critique sur le sort": , "% Dommages aux sorts": , "% Dommages d'armes": , "% Dommages distance": , "% Dommages mêlée": , "% Résistance Air": , "% Résistance Eau": , "% Résistance Feu": , "% Résistance Neutre": , "% Résistance Terre": , "% Résistance distance": , "% Résistance mêlée": , "- % Résistance Eau": , "- % Résistance Neutre": , "- Agilité": , "- Chance": , "- Dommages Air": , "- Dommages Critiques": , "- Dommages Eau": , "- Dommages Feu": , "- Dommages Neutre": , "- Dommages Poussée": , "- Dommages Terre": , "- Esquive PA": , "- Esquive PM": , "- Force": , "- Fuite": , "- Initiative": , "- Intelligence": , "- PA": , "- PM": , "- Portée": , "- Prospection": , "- Retrait PA": , "- Retrait PM": , "- Résistance Critiques": , "- Résistance Poussée": , "- Sagesse": , "- Tacle": , "- Vitalité": , "-% Critique": , "-% Dommages aux sorts": , "-% Dommages d'armes": , "-% Dommages distance": , "-% Dommages mêlée": , "-% Résistance Air": , "-% Résistance Feu": , "-% Résistance Terre": , "-% Résistance distance": , "-% Résistance mêlée": , "Attitude": , "Dommages": , "Dommages Air": , "Dommages Critiques": , "Dommages Eau": , "Dommages Feu": , "Dommages Neutre": , "Dommages Pièges": , "Dommages Poussée": , "Dommages Terre": , "Dommages sur le sort": , "Esquive PA": , "Esquive PM": , "Fuite": , "Initiative": , "Pods": , "Prospection": , "Puissance": , "Puissance (pièges)": , "Renvoie dommages": , "Retrait PA": , "Retrait PM": , "Résistance Air": , "Résistance Critiques": , "Résistance Eau": , "Résistance Feu": , "Résistance Neutre": , "Résistance Poussée": , "Résistance Terre": , "Sagesse": , "Soins": , "Tacle": , "Vitalité": }
-# And_Or_seco = "AND"
+
 # element = []
 
 # s = "http://www.dofus.com/fr/mmorpg/encyclopedie/equipements?text="
