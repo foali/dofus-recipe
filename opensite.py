@@ -4,23 +4,10 @@ import requests
 import tkinter as tk
 from tkinter import ttk
 
-# parser = argparse.ArgumentParser()
-# parser.add_argument("item", type=str, nargs='+',
-#                     help="display a square of a given number")
-# parser.add_argument("-m", "--levelmin", type=int,
-#                     help="set the min level")
-# parser.add_argument("-M", "--levelmax", type=int,
-#                     help="set the max level")
-# parser.add_argument("-c", "--charach", type=)
-# args = parser.parse_args()
-
-
-def RetrieveData(search_item):
-    if search_item is not None:
-        print(search_item)
-
-
 class dofus_frame(tk.Tk):
+"""
+this is the main frame. It store all the pages
+"""
     def __init__(self, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
         mainframe = tk.Frame(self)
@@ -37,18 +24,24 @@ class dofus_frame(tk.Tk):
         self.show_frame(StartPage)
 
     def show_frame(self, framekey):
+    """
+    this function show you the page in argument
+    """
         frame = self.frames[framekey]
         frame.tkraise()
 
     def get_page(self, classname):
-        # for page in self.frames.values():
-        #     if str(page.__class__.__name__) == classname:
-        #         return self.frames[page]
+    """
+    Take the name f the page and return the objet page
+    """
         return self.frames[classname]
 
 
 class StartPage(tk.Frame):
-
+"""
+Page with the different choice.
+Use to select which objetct you want to craft and its characteristics
+"""
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
         self.controller = controller
@@ -100,11 +93,11 @@ class StartPage(tk.Frame):
         tk.Label(self, text="Level max").grid(row=7, column=0)
         Launchsearch.grid(row=6, column=2, rowspan=2)
 
-    def test(self):
-        print(self.levelmax.get())
-
 
 class PageOne(tk.Frame):
+    """
+    This page gave you the result with a list of item. 
+    """
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
         self.controller = controller
@@ -114,6 +107,9 @@ class PageOne(tk.Frame):
         button.grid(row=2, column=0, columnspan=1)
 
     def update(self):
+        """
+        Update will do the request and return  you the list of item in a list in the GUI in witch you can choose witch items you need
+        """
         start_page = self.controller.get_page(StartPage)
         value_list_item = start_page.listitem.curselection()
         value_list_arme = start_page.listarme.curselection()
@@ -176,13 +172,11 @@ class PageOne(tk.Frame):
             self.resultlist.grid(row=1, column=0)
             button = ttk.Button(self, text="Print to file", command=self.printresultfile)
             button.grid(row=2, column=1, columnspan=1)
-            # f.write(site.text)
-            # f.close()
-        # RetrieveData(StartPage.listarme.curselection())
-        # test = tk.Listbox(self, selectmode='multiple', exportselection=0)
-        # test.grid(row=1, column=0, columnspan=1)
 
     def printresultfile(self):
+        """
+        print all the item needed to craft the items selected a file name "listressource.txt"
+        """
         itemvoulu = self.resultlist.curselection()
         list_ressource = {}
         for i in itemvoulu:
@@ -216,25 +210,3 @@ if __name__ == "__main__":
     app = dofus_frame()
     app.mainloop()
 
-
-# element = []
-
-# s = "http://www.dofus.com/fr/mmorpg/encyclopedie/equipements?text="
-# for i in args.item:
-#     s = s + "&type_id[]=" + str(list_object[i])
-# if args.levelmin:
-#     s = s + "&object_level_min=" + str(args.levelmin)
-# if args.levelmax:
-#     s = s + "&object_level_max=" + str(args.levelmax)
-# if args.
-# print(s)
-# site = requests.get(s)
-# print(site)
-
-#
-# s = requests.Session()
-# s.mount('https://www.dofus.fr', HTTPAdapter(max_retries=5))
-# s.headers["User-Agent"] = "PlacePlacer"
-# r = s.post("https://www.reddit.com/api/login/{}".format(username),
-#            data={"user": username, "passwd": password, "api_type": "json"})
-# s.headers['x-modhash'] = r.json()["json"]["data"]["modhash"]
